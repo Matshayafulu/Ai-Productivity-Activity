@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppActivityRouteImport } from './routes/app.activity'
 import { Route as AppEmailRouteImport } from './routes/app.email'
 import { Route as AppNotesRouteImport } from './routes/app.notes'
 import { Route as AppPlannerRouteImport } from './routes/app.planner'
 import { Route as AppResearchRouteImport } from './routes/app.research'
+import { Route as AppStaffRouteImport } from './routes/app.staff'
+import { Route as AppThandiRouteImport } from './routes/app.thandi'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,6 +33,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppActivityRoute = AppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => AppRoute,
 } as any)
 const AppEmailRoute = AppEmailRouteImport.update({
@@ -52,32 +60,51 @@ const AppResearchRoute = AppResearchRouteImport.update({
   path: '/research',
   getParentRoute: () => AppRoute,
 } as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppThandiRoute = AppThandiRouteImport.update({
+  id: '/thandi',
+  path: '/thandi',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/app/activity': typeof AppActivityRoute
   '/app/email': typeof AppEmailRoute
   '/app/notes': typeof AppNotesRoute
   '/app/planner': typeof AppPlannerRoute
   '/app/research': typeof AppResearchRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/thandi': typeof AppThandiRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app/activity': typeof AppActivityRoute
   '/app/email': typeof AppEmailRoute
   '/app/notes': typeof AppNotesRoute
   '/app/planner': typeof AppPlannerRoute
   '/app/research': typeof AppResearchRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/thandi': typeof AppThandiRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/app/activity': typeof AppActivityRoute
   '/app/email': typeof AppEmailRoute
   '/app/notes': typeof AppNotesRoute
   '/app/planner': typeof AppPlannerRoute
   '/app/research': typeof AppResearchRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/thandi': typeof AppThandiRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -85,27 +112,36 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/app/activity'
     | '/app/email'
     | '/app/notes'
     | '/app/planner'
     | '/app/research'
+    | '/app/staff'
+    | '/app/thandi'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app/activity'
     | '/app/email'
     | '/app/notes'
     | '/app/planner'
     | '/app/research'
+    | '/app/staff'
+    | '/app/thandi'
     | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/app/activity'
     | '/app/email'
     | '/app/notes'
     | '/app/planner'
     | '/app/research'
+    | '/app/staff'
+    | '/app/thandi'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -137,6 +173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/activity': {
+      id: '/app/activity'
+      path: '/activity'
+      fullPath: '/app/activity'
+      preLoaderRoute: typeof AppActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/email': {
       id: '/app/email'
       path: '/email'
@@ -165,22 +208,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppResearchRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/staff': {
+      id: '/app/staff'
+      path: '/staff'
+      fullPath: '/app/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/thandi': {
+      id: '/app/thandi'
+      path: '/thandi'
+      fullPath: '/app/thandi'
+      preLoaderRoute: typeof AppThandiRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppActivityRoute: typeof AppActivityRoute
   AppEmailRoute: typeof AppEmailRoute
   AppNotesRoute: typeof AppNotesRoute
   AppPlannerRoute: typeof AppPlannerRoute
   AppResearchRoute: typeof AppResearchRoute
+  AppStaffRoute: typeof AppStaffRoute
+  AppThandiRoute: typeof AppThandiRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppActivityRoute: AppActivityRoute,
   AppEmailRoute: AppEmailRoute,
   AppNotesRoute: AppNotesRoute,
   AppPlannerRoute: AppPlannerRoute,
   AppResearchRoute: AppResearchRoute,
+  AppStaffRoute: AppStaffRoute,
+  AppThandiRoute: AppThandiRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
