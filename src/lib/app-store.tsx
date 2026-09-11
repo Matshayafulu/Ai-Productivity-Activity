@@ -7,6 +7,25 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { User } from "@supabase/supabase-js";
+
+import { supabase } from "@/integrations/supabase/client";
+
+function toSessionUser(u: User | null): SessionUser | null {
+  if (!u) return null;
+  const email = u.email ?? "";
+  const metaName =
+    typeof u.user_metadata?.["full_name"] === "string"
+      ? (u.user_metadata["full_name"] as string)
+      : "";
+  const name =
+    metaName.trim() ||
+    email
+      .split("@")[0]
+      .replace(/[._-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  return { name, email, role: "Team Member" };
+}
 
 export type Availability = "available" | "away" | "busy";
 
@@ -288,7 +307,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       hydrated,
-      login,
+      user,
       logout,
       setAvailability,
       setStaffAvailability,
@@ -300,7 +319,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [
       state,
       hydrated,
-      login,
+      user,
       logout,
       setAvailability,
       setStaffAvailability,
