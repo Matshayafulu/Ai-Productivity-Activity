@@ -57,8 +57,8 @@ export function AppLayout({ title, children }: { title: string; children: ReactN
       .join("")
       .toUpperCase() ?? "?";
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate({ to: "/", replace: true });
   }
 
