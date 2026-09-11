@@ -7,6 +7,25 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { User } from "@supabase/supabase-js";
+
+import { supabase } from "@/integrations/supabase/client";
+
+function toSessionUser(u: User | null): SessionUser | null {
+  if (!u) return null;
+  const email = u.email ?? "";
+  const metaName =
+    typeof u.user_metadata?.["full_name"] === "string"
+      ? (u.user_metadata["full_name"] as string)
+      : "";
+  const name =
+    metaName.trim() ||
+    email
+      .split("@")[0]
+      .replace(/[._-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  return { name, email, role: "Team Member" };
+}
 
 export type Availability = "available" | "away" | "busy";
 
@@ -117,7 +136,6 @@ const SEED_STAFF: Staff[] = [
 const KEY = "awpa.state.v1";
 
 type PersistedState = {
-  user: SessionUser | null;
   availability: Availability;
   staff: Staff[];
   activities: Activity[];
@@ -126,7 +144,6 @@ type PersistedState = {
 };
 
 const initialState: PersistedState = {
-  user: null,
   availability: "available",
   staff: SEED_STAFF,
   activities: [],
@@ -136,8 +153,8 @@ const initialState: PersistedState = {
 
 type Store = PersistedState & {
   hydrated: boolean;
-  login: (email: string, name?: string) => void;
-  logout: () => void;
+  user: SessionUser | null;
+  logout: () => Promise<void>;
   setAvailability: (a: Availability) => void;
   setStaffAvailability: (id: string, a: Availability) => void;
   logActivity: (type: string, description: string) => void;
@@ -154,7 +171,22 @@ export function newId() {
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PersistedState>(initialState);
-  const [hydrated, setHydrated] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const hydrated = storageReady && authReady;
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(toSessionUser(session?.user ?? null));
+      setAuthReady(true);
+    });
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(toSessionUser(session?.user ?? null));
+      setAuthReady(true);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     try {
@@ -188,35 +220,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const login = useCallback(
-    (email: string, name?: string) => {
-      const derived =
-        name?.trim() ||
-        email
-          .split("@")[0]
-          .replace(/[._-]+/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-      setState((s) => ({
-        ...s,
-        user: { name: derived, email, role: "Team Member" },
-        activities: [
-          {
-            id: newId(),
-            type: "Authentication",
-            description: `Signed in as ${email}`,
-            at: new Date().toISOString(),
-          },
-          ...s.activities,
-        ],
-      }));
-    },
-    [],
-  );
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setState((s) => ({
       ...s,
-      user: null,
       activities: [
         {
           id: newId(),
@@ -227,6 +233,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         ...s.activities,
       ],
     }));
+    await supabase.auth.signOut();
+    setUser(null);
   }, []);
 
   const setAvailability = useCallback((a: Availability) => {
@@ -299,7 +307,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       hydrated,
-      login,
+      user,
       logout,
       setAvailability,
       setStaffAvailability,
@@ -311,7 +319,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [
       state,
       hydrated,
-      login,
+      user,
       logout,
       setAvailability,
       setStaffAvailability,

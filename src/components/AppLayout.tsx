@@ -57,8 +57,8 @@ export function AppLayout({ title, children }: { title: string; children: ReactN
       .join("")
       .toUpperCase() ?? "?";
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate({ to: "/", replace: true });
   }
 
@@ -146,7 +146,7 @@ export function AppLayout({ title, children }: { title: string; children: ReactN
                 <DropdownMenuItem onSelect={() => setHelpOpen(true)}>
                   <CircleHelp className="size-4" aria-hidden="true" /> Help
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleLogout}>
+                <DropdownMenuItem onSelect={() => void handleLogout()}>
                   <LogOut className="size-4" aria-hidden="true" /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
