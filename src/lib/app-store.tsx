@@ -117,7 +117,6 @@ const SEED_STAFF: Staff[] = [
 const KEY = "awpa.state.v1";
 
 type PersistedState = {
-  user: SessionUser | null;
   availability: Availability;
   staff: Staff[];
   activities: Activity[];
@@ -126,7 +125,6 @@ type PersistedState = {
 };
 
 const initialState: PersistedState = {
-  user: null,
   availability: "available",
   staff: SEED_STAFF,
   activities: [],
