@@ -134,8 +134,8 @@ const initialState: PersistedState = {
 
 type Store = PersistedState & {
   hydrated: boolean;
-  login: (email: string, name?: string) => void;
-  logout: () => void;
+  user: SessionUser | null;
+  logout: () => Promise<void>;
   setAvailability: (a: Availability) => void;
   setStaffAvailability: (id: string, a: Availability) => void;
   logActivity: (type: string, description: string) => void;
@@ -152,7 +152,22 @@ export function newId() {
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PersistedState>(initialState);
-  const [hydrated, setHydrated] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const hydrated = storageReady && authReady;
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(toSessionUser(session?.user ?? null));
+      setAuthReady(true);
+    });
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(toSessionUser(session?.user ?? null));
+      setAuthReady(true);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     try {
