@@ -201,35 +201,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const login = useCallback(
-    (email: string, name?: string) => {
-      const derived =
-        name?.trim() ||
-        email
-          .split("@")[0]
-          .replace(/[._-]+/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-      setState((s) => ({
-        ...s,
-        user: { name: derived, email, role: "Team Member" },
-        activities: [
-          {
-            id: newId(),
-            type: "Authentication",
-            description: `Signed in as ${email}`,
-            at: new Date().toISOString(),
-          },
-          ...s.activities,
-        ],
-      }));
-    },
-    [],
-  );
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setState((s) => ({
       ...s,
-      user: null,
       activities: [
         {
           id: newId(),
@@ -240,6 +214,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         ...s.activities,
       ],
     }));
+    await supabase.auth.signOut();
+    setUser(null);
   }, []);
 
   const setAvailability = useCallback((a: Availability) => {
