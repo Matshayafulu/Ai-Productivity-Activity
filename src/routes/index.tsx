@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/lib/app-store";
 
 export const Route = createFileRoute("/")({
@@ -17,12 +18,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Sign in to the AI Workplace Productivity Assistant to draft emails, summarize meetings, plan tasks and chat with THANDI.",
+          "Sign in or create an account for the AI Workplace Productivity Assistant to draft emails, summarize meetings, plan tasks and chat with THANDI.",
       },
       { property: "og:title", content: "Sign in · AI Workplace Productivity Assistant" },
       {
         property: "og:description",
-        content: "Secure demo sign-in for the AI Workplace Productivity Assistant.",
+        content: "Secure sign-in and registration for the AI Workplace Productivity Assistant.",
       },
     ],
   }),
@@ -31,14 +32,28 @@ export const Route = createFileRoute("/")({
 
 const REMEMBER_KEY = "awpa.remember.email";
 
+type Mode = "signin" | "signup";
+
+type FieldErrors = {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirm?: string;
+};
+
 function LoginPage() {
-  const { user, hydrated, login } = useAppStore();
+  const { user, hydrated, logActivity } = useAppStore();
   const navigate = useNavigate();
+  const [mode, setMode] = useState<Mode>("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -54,29 +69,95 @@ function LoginPage() {
   }, [hydrated, user, navigate]);
 
   function validate() {
-    const next: { email?: string; password?: string } = {};
+    const next: FieldErrors = {};
     const value = email.trim();
-    if (!value) next.email = "Enter your work email or username.";
-    else if (value.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value))
+    if (!value) next.email = "Enter your work email.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value))
       next.email = "Enter a valid email address.";
-    else if (!value.includes("@") && value.length < 3)
-      next.email = "Usernames must be at least 3 characters.";
     if (!password) next.password = "Enter your password.";
+    else if (password.length < 8 && mode === "signup")
+      next.password = "Password must be at least 8 characters.";
     else if (password.length < 6) next.password = "Password must be at least 6 characters.";
+    if (mode === "signup") {
+      if (!name.trim()) next.name = "Enter your full name.";
+      if (confirm !== password) next.confirm = "Passwords do not match.";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
 
-  function onSubmit(e: FormEvent) {
+  function switchMode(next: Mode) {
+    setMode(next);
+    setErrors({});
+    setFormError(null);
+    setNotice(null);
+    setConfirm("");
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    setFormError(null);
+    setNotice(null);
     if (!validate()) return;
+    const identifier = email.trim().toLowerCase();
     setSubmitting(true);
-    const identifier = email.trim();
-    if (remember) window.localStorage.setItem(REMEMBER_KEY, identifier);
-    else window.localStorage.removeItem(REMEMBER_KEY);
-    login(identifier.includes("@") ? identifier : `${identifier}@company.com`);
-    toast.success("Signed in");
-    navigate({ to: "/app", replace: true });
+    try {
+      if (remember) window.localStorage.setItem(REMEMBER_KEY, identifier);
+      else window.localStorage.removeItem(REMEMBER_KEY);
+
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: identifier,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { full_name: name.trim() },
+          },
+        });
+        if (error) {
+          setFormError(
+            /already registered|already exists/i.test(error.message)
+              ? "An account with this email already exists. Try signing in instead."
+              : error.message,
+          );
+          return;
+        }
+        if (!data.session) {
+          setNotice("Account created. Check your inbox to confirm your email, then sign in.");
+          toast.success("Account created — confirm your email to continue");
+          setMode("signin");
+          setPassword("");
+          setConfirm("");
+          return;
+        }
+        logActivity("Authentication", `Account created for ${identifier}`);
+        toast.success("Welcome aboard");
+        navigate({ to: "/app", replace: true });
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password,
+      });
+      if (error) {
+        setFormError(
+          /invalid login credentials/i.test(error.message)
+            ? "Incorrect email or password."
+            : /email not confirmed/i.test(error.message)
+              ? "Please confirm your email address first — check your inbox."
+              : error.message,
+        );
+        return;
+      }
+      logActivity("Authentication", `Signed in as ${identifier}`);
+      toast.success("Signed in");
+      navigate({ to: "/app", replace: true });
+    } catch {
+      setFormError("We couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -103,17 +184,85 @@ function LoginPage() {
           </section>
 
           <section className="surface-panel p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-foreground">Sign in</h2>
+            <div
+              role="tablist"
+              aria-label="Authentication"
+              className="mb-6 grid grid-cols-2 gap-1 rounded-md bg-secondary p-1"
+            >
+              {(["signin", "signup"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => switchMode(m)}
+                  className={
+                    "rounded-sm px-3 py-2 text-sm font-medium transition-colors " +
+                    (mode === m
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  {m === "signin" ? "Sign in" : "Create account"}
+                </button>
+              ))}
+            </div>
+
+            <h2 className="text-xl font-bold text-foreground">
+              {mode === "signin" ? "Sign in" : "Create your account"}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Demo access: use any work email and a password of at least 6 characters.
+              {mode === "signin"
+                ? "Use your work email and password to continue."
+                : "Register with your work email. Passwords need at least 8 characters."}
             </p>
+
+            {formError && (
+              <p
+                role="alert"
+                className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {formError}
+              </p>
+            )}
+            {notice && (
+              <p
+                role="status"
+                className="mt-4 rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground"
+              >
+                {notice}
+              </p>
+            )}
+
             <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
+              {mode === "signup" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Full name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    aria-invalid={!!errors.name}
+                    aria-describedby={errors.name ? "name-error" : undefined}
+                    placeholder="Thandeka Mokoena"
+                  />
+                  {errors.name && (
+                    <p id="name-error" role="alert" className="text-xs text-destructive">
+                      {errors.name}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email or username</Label>
+                <Label htmlFor="email">Work email</Label>
                 <Input
                   id="email"
                   name="email"
-                  autoComplete="username"
+                  type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   aria-invalid={!!errors.email}
@@ -134,7 +283,7 @@ function LoginPage() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     aria-invalid={!!errors.password}
@@ -161,20 +310,43 @@ function LoginPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="remember"
-                  checked={remember}
-                  onCheckedChange={(v) => setRemember(v === true)}
-                />
-                <Label htmlFor="remember" className="text-sm font-normal">
-                  Remember me on this device
-                </Label>
-              </div>
+              {mode === "signup" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm">Confirm password</Label>
+                  <Input
+                    id="confirm"
+                    name="confirm"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    aria-invalid={!!errors.confirm}
+                    aria-describedby={errors.confirm ? "confirm-error" : undefined}
+                  />
+                  {errors.confirm && (
+                    <p id="confirm-error" role="alert" className="text-xs text-destructive">
+                      {errors.confirm}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {mode === "signin" && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember"
+                    checked={remember}
+                    onCheckedChange={(v) => setRemember(v === true)}
+                  />
+                  <Label htmlFor="remember" className="text-sm font-normal">
+                    Remember my email on this device
+                  </Label>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-                Sign in
+                {mode === "signin" ? "Sign in" : "Create account"}
               </Button>
             </form>
             <p className="mt-4 text-xs text-muted-foreground lg:hidden">
