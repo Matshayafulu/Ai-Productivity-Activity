@@ -198,7 +198,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore corrupt storage */
     }
-    setHydrated(true);
+    setStorageReady(true);
   }, []);
 
   useEffect(() => {
