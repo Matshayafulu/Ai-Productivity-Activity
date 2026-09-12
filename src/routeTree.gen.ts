@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResponsibleAiRouteImport } from './routes/responsible-ai'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppActivityRouteImport } from './routes/app.activity'
 import { Route as AppEmailRouteImport } from './routes/app.email'
@@ -40,6 +41,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const ResponsibleAiRoute = ResponsibleAiRouteImport.update({
   id: '/responsible-ai',
   path: '/responsible-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/responsible-ai': typeof ResponsibleAiRoute
+  '/settings': typeof SettingsRoute
   '/app/activity': typeof AppActivityRoute
   '/app/email': typeof AppEmailRoute
   '/app/notes': typeof AppNotesRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-ai': typeof ResponsibleAiRoute
+  '/settings': typeof SettingsRoute
   '/app/activity': typeof AppActivityRoute
   '/app/email': typeof AppEmailRoute
   '/app/notes': typeof AppNotesRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/responsible-ai': typeof ResponsibleAiRoute
+  '/settings': typeof SettingsRoute
   '/app/activity': typeof AppActivityRoute
   '/app/email': typeof AppEmailRoute
   '/app/notes': typeof AppNotesRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/privacy'
     | '/responsible-ai'
+    | '/settings'
     | '/app/activity'
     | '/app/email'
     | '/app/notes'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/privacy'
     | '/responsible-ai'
+    | '/settings'
     | '/app/activity'
     | '/app/email'
     | '/app/notes'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/privacy'
     | '/responsible-ai'
+    | '/settings'
     | '/app/activity'
     | '/app/email'
     | '/app/notes'
@@ -174,6 +186,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   PrivacyRoute: typeof PrivacyRoute
   ResponsibleAiRoute: typeof ResponsibleAiRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       path: '/responsible-ai'
       fullPath: '/responsible-ai'
       preLoaderRoute: typeof ResponsibleAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -294,6 +314,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   PrivacyRoute: PrivacyRoute,
   ResponsibleAiRoute: ResponsibleAiRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
