@@ -40,7 +40,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      email_exists: { Args: { email_input: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
