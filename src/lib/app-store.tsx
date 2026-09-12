@@ -20,8 +20,7 @@ function toSessionUser(u: User | null): SessionUser | null {
       : "";
   const name =
     metaName.trim() ||
-    email
-      .split("@")[0]
+    (email.split("@")[0] ?? "")
       .replace(/[._-]+/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
   return { name, email, role: "Team Member" };
